@@ -1,8 +1,9 @@
 # Convert OD demand to demand.DAT
 
+input_od = r"D:\GitHub\DTA\Valencia\ignore\StreetLight\1202750_2021_ODD_Vehicles_od_all.DAT"
+output_od = r"D:\GitHub\DTA\Valencia\ignore\StreetLight\demand.DAT"
+
 # parameters
-input_od = r"D:\GitHub\DTA\ignore\Valencia\StreetLight\1202751_2021_ODD_Truck.DAT"
-output_od = r"D:\GitHub\DTA\ignore\Valencia\StreetLight\demand_002.DAT"
 intervals = 24
 zone_num = 1104
 from_zone = [i for i in range(1, zone_num + 1)]
@@ -30,6 +31,7 @@ k = 1
 with open(input_od, 'r') as od_file:
     f = od_file.readlines()
     hour_time = 0
+    
     for line in f[1:]:
         if i % (zone_num ** 2) == 1: # new start time
             time_st = 'Start time ='
