@@ -1,57 +1,59 @@
 library(data.table)
 library(ggplot2)
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Get OD values from StreetLight analysis -----
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 num_zone <- 1104
 
+# create empty data set of required zones and hours
 OD <- data.table(
-  OZoneID = sort(rep.int(1:num_zone, num_zone * 24)),
-  DZoneID = rep.int(sort(rep.int(1:num_zone, 24)), num_zone),
-  Hour = rep.int(0:23, num_zone * num_zone) * 60
+    OZoneID = sort(rep.int(1:num_zone, num_zone * 24)),
+    DZoneID = rep.int(sort(rep.int(1:num_zone, 24)), num_zone),
+    Hour = rep.int(0:23, num_zone * num_zone) * 60
 )
 
-getOD <- function(type, folder) {
+input_dir <- "Valencia/ignore/StreetLight/"
+input_file_vehicles <- "1202750_2021_ODD_Vehicles_od_all"
+input_file_truck <- "1202751_2021_ODD_Truck_od_comm"
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Get OD demand from StreetLight analysis -----
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+getOD <- function(type, input_file) {
   
-  if (type == 'vehicles'){
-    csv_ext <- 'od_all'
-  } else {
-    csv_ext <- 'od_comm'
-  }
-  
-  path <- paste0("./ignore/Valencia/StreetLight/", folder, "/", folder, "/", folder, "_", csv_ext, ".csv")
+  path <- paste0(input_dir, input_file, ".csv")
   DT <- fread(path)
   
-  setnames(DT, "Origin Zone ID", "OZoneID")
-  setnames(DT, "Destination Zone ID", "DZoneID")
-  setnames(DT, "Day Part", "Hour")
-  setnames(DT, "Average Daily O-D Traffic (StL Calibrated Index)", "Volume")
+  # rename variables
+  setnames(DT, 'Origin Zone ID', 'OZoneID')
+  setnames(DT, 'Destination Zone ID', 'DZoneID')
+  setnames(DT, 'Day Part', 'Hour')
+  setnames(DT, 'Average Daily O-D Traffic (StL Calibrated Index)', 'Volume')
   
-  DT <- DT[`Day Type` == "1: Weekday (M-Th)" & Hour != "00: All Day (12am-12am)", ]
+  DT <- DT[`Day Type` == '1: Weekday (M-Th)' & Hour != '00: All Day (12am-12am)', ]
   
+  # aggregate demand for trucks
   if (type == 'truck'){
     DT <- DT[, .(Volume = sum(Volume)), by = .(OZoneID, DZoneID, Hour)]
   }
   
   DT <- DT[, .(OZoneID, DZoneID, Hour, Volume)]
   DT[, Hour := (as.integer(substr(Hour, 1, 2)) - 1) * 60]
-  DT <- DT[order(OZoneID, Hour, DZoneID)]
   
-  DT <- merge(OD, DT, by = c("OZoneID", "DZoneID", "Hour"), all = TRUE)
+  # merge data sets
+  DT <- merge(OD, DT, by = c('OZoneID', 'DZoneID', 'Hour'), all = TRUE)
+  DT <- DT[order(Hour, OZoneID, DZoneID)]
   DT[, Volume := fifelse(is.na(Volume), 0, Volume)]
+  
+  # write demand
+  output_file <- paste0(input_dir, input_file, ".DAT")
+  fwrite(DT, output_file, sep = '\t')
+  
+  return(DT)
 }
 
-stl_vehicles_folder <- "1202750_2021_ODD_Vehicles"
-stl_truck_folder <- "1202751_2021_ODD_Truck"
-
-# Write demand to DAT files
-demand_car <- getOD('vehicles', stl_vehicles_folder)
-fwrite(demand_car, paste0("./ignore/Valencia/StreetLight/", stl_vehicles_folder, ".DAT"), sep = "\t")
-
-demand_truck <- getOD('truck', stl_truck_folder)
-fwrite(demand_truck, paste0("./ignore/Valencia/StreetLight/", stl_truck_folder, ".DAT"), sep = "\t")
+demand_car <- getOD('vehicles', input_file_vehicles)
+demand_truck <- getOD('truck', input_file_truck)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,14 +96,16 @@ plot_truck <- dist_truck |>
 plot_car
 plot_truck
 
-ggsave("./Valencia/figures/2021_demand_dist_car.png",
+output_dir <- "Valencia/output/"
+
+ggsave(paste0(output_dir, "2021_demand_dist_car.png"),
        plot = plot_car,
        units = "cm",
        width = 29.7,
        height = 21,
        dpi = 600)
 
-ggsave("./Valencia/figures/2021_demand_dist_truck.png",
+ggsave(paste0(output_dir, "2021_demand_dist_truck.png"),
        plot = plot_truck,
        units = "cm",
        width = 29.7,
@@ -111,8 +115,11 @@ ggsave("./Valencia/figures/2021_demand_dist_truck.png",
 
 # Check demand
 
-dem_veh <- fread("ignore/Valencia/StreetLight/1202750_2021_ODD_Vehicles.DAT")
-dem_truck <- fread("ignore/Valencia/StreetLight/1202751_2021_ODD_Truck.DAT")
+dem_veh <- fread(paste0(input_dir, input_file_vehicles, ".DAT"))
+dem_truck <- fread(paste0(input_dir, input_file_truck, ".DAT"))
 
-dem_veh[, .(demand = sum(Volume)), by = .(Hour)]
-dem_truck[, .(demand = sum(Volume)), by = .(Hour)]
+total_dem_veh <- sum(dem_veh$Volume)
+total_dem_truck <- sum(dem_truck$Volume)
+
+dem_veh[, .(demand = round(sum(Volume) / total_dem_veh * 100, 2)), by = .(Hour)]
+dem_truck[, .(demand = round(sum(Volume) / total_dem_truck * 100, 2)), by = .(Hour)]
