@@ -23,9 +23,13 @@ length(unique(shapes$shape_id))
 
 stop_times <- fread("Valencia/data/GTFS_SunTran/stop_times.txt")
 length(unique(stop_times$trip_id))
+
 stop_times$stop_headsign <- NULL
 stop_times$pickup_type <- NULL
 stop_times$drop_off_type <- NULL
+
+stop_times[, arrival_time := as.ITime(arrival_time, format = '%H:%M:%S')]
+stop_times[, departure_time := as.ITime(departure_time, format = '%H:%M:%S')]
 
 # stops
 
@@ -62,23 +66,75 @@ select_routes_id <- routes[grepl('Valencia', route_long_name) & route_type %in% 
 select_trips <- trips[route_id %in% select_routes_id & service_id %in% select_service_id, ]
 select_trips_id <- unique(select_trips$trip_id)
 
+# get trips id for each direction
+trips_id_dir0 <- select_trips[direction_id == 0L, ]$trip_id
+trips_id_dir1 <- select_trips[direction_id == 1L, ]$trip_id
+
 # select stops based on trips id
-select_stop_times <- stop_times[trip_id %in% select_trips_id, ]
+select_stop_times_dir0 <- stop_times[trip_id %in% trips_id_dir0, ]
+select_stop_times_dir1 <- stop_times[trip_id %in% trips_id_dir1, ]
 
-select_stop_times[, arrival_time := as.ITime(arrival_time, format = '%H:%M:%S')]
-select_stop_times[, departure_time := as.ITime(departure_time, format = '%H:%M:%S')]
-
-select_stop_times[, .N, by = stop_sequence] # 39 stops for each trip
+select_stop_times_dir0[, .N, by = stop_sequence] # 39 stops for each of 30 trips
+select_stop_times_dir1[, .N, by = stop_sequence] # 39 stops for each of 31 trips
 
 # select trips excluding night trips
-select_stop_times2 <- select_stop_times[hour(departure_time) < 19L, ]
+select_stop_times_dir0 <- select_stop_times_dir0[hour(departure_time) < 19L, ]
+select_stop_times_dir1 <- select_stop_times_dir1[hour(departure_time) < 19L, ]
+
+# get stops id
+select_stops_id_dir0 <- unique(select_stop_times_dir0$stop_id)
+select_stops_id_dir1 <- unique(select_stop_times_dir1$stop_id)
+
+length(select_stops_id_dir0)
+length(select_stops_id_dir1)
 
 # select stops based on stop id
-select_stops_id <- unique(select_stop_times2$stop_id)
-select_stops <- stops[stop_id %in% select_stops_id, ]
+select_stops_dir0 <- stops[stop_id %in% select_stops_id_dir0, ]
+select_stops_dir1 <- stops[stop_id %in% select_stops_id_dir1, ]
 
 leaflet() |> 
     addTiles() |> 
-    addCircleMarkers(lng = ~stop_lon, lat = ~stop_lat, data = select_stops, radius = 5, color = 'black')
+    addCircleMarkers(lng = ~stop_lon, lat = ~stop_lat, data = select_stops_dir0, radius = 5, color = 'black')
 
-# get stop id sequence based on stop sequnce
+leaflet() |> 
+    addTiles() |> 
+    addCircleMarkers(lng = ~stop_lon, lat = ~stop_lat, data = select_stops_dir1, radius = 5, color = 'black')
+
+# check stop sequence for each trip
+split_stops_dir0 <- select_stop_times_dir0[, .(trip_id, stop_id, stop_sequence)] |> 
+    split(by = 'trip_id', keep.by = FALSE)
+
+split_stops_dir1 <- select_stop_times_dir1[, .(trip_id, stop_id, stop_sequence)] |> 
+    split(by = 'trip_id', keep.by = FALSE)
+
+check_identical <- function(x, y) {
+    if (identical(x, y)) x
+    else FALSE
+}
+
+Reduce(check_identical, split_stops_dir0)
+Reduce(check_identical, split_stops_dir1)
+
+# get stop id sequence based on stop sequence
+stops_id_seq_dir0 <- split_stops_dir0[[1]]$stop_id
+stops_id_seq_dir1 <- split_stops_dir1[[1]]$stop_id
+
+rev(stops_id_seq_dir1) == stops_id_seq_dir0
+
+# update selected stops
+select_stops_dir0 <- select_stops_dir0[split_stops_dir0[[1]], on = 'stop_id']
+select_stops_dir1 <- select_stops_dir1[split_stops_dir1[[1]], on = 'stop_id']
+
+leaflet() |> 
+    addTiles() |> 
+    addCircleMarkers(lng = ~stop_lon, lat = ~stop_lat, data = select_stops_dir0, radius = 5, color = 'black',
+                     popup = paste0('ID: ', select_stops_dir0$stop_id, ', ',
+                                    'SEQ: ', select_stops_dir0$stop_sequence, ', ', 
+                                    'LOC: ', select_stops_dir0$stop_name))
+
+leaflet() |> 
+    addTiles() |> 
+    addCircleMarkers(lng = ~stop_lon, lat = ~stop_lat, data = select_stops_dir1, radius = 5, color = 'black',
+                     popup = paste0('ID: ', select_stops_dir1$stop_id, ', ',
+                                    'SEQ: ', select_stops_dir1$stop_sequence, ', ', 
+                                    'LOC: ', select_stops_dir1$stop_name))
