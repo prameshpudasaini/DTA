@@ -1,5 +1,6 @@
 library(data.table)
 library(leaflet)
+library(htmlwidgets)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # GTFS Shapefiles --------------------------------------------------------------
@@ -125,16 +126,42 @@ rev(stops_id_seq_dir1) == stops_id_seq_dir0
 select_stops_dir0 <- select_stops_dir0[split_stops_dir0[[1]], on = 'stop_id']
 select_stops_dir1 <- select_stops_dir1[split_stops_dir1[[1]], on = 'stop_id']
 
-leaflet() |> 
+stops_dir0 <- leaflet() |> 
     addTiles() |> 
     addCircleMarkers(lng = ~stop_lon, lat = ~stop_lat, data = select_stops_dir0, radius = 5, color = 'black',
                      popup = paste0('ID: ', select_stops_dir0$stop_id, ', ',
                                     'SEQ: ', select_stops_dir0$stop_sequence, ', ', 
                                     'LOC: ', select_stops_dir0$stop_name))
 
-leaflet() |> 
+stops_dir1 <- leaflet() |> 
     addTiles() |> 
     addCircleMarkers(lng = ~stop_lon, lat = ~stop_lat, data = select_stops_dir1, radius = 5, color = 'black',
                      popup = paste0('ID: ', select_stops_dir1$stop_id, ', ',
                                     'SEQ: ', select_stops_dir1$stop_sequence, ', ', 
                                     'LOC: ', select_stops_dir1$stop_name))
+
+# save stops as HTML files
+stops_dir0 # Laos Transit Center to Casino Del Sol
+stops_dir1 # Casino Del Sol to Laos Transit Center
+
+# saveWidget(stops_dir0, file = "Valencia/output/stops_LTC_CDS.html")
+# saveWidget(stops_dir1, file = "Valencia/output/stops_CDS_LTC.html")
+
+# function to get departure times for each trip
+getDepTimes <- function(data) {
+    DT <- copy(data)[, .(trip_id, stop_sequence, departure_time)]
+    DT[, departure_time := round(departure_time, 'minutes')]
+    DT[, dynust_format := as.numeric(paste0(hour(departure_time), '.', minute(departure_time)))]
+    DT$departure_time <- NULL
+    
+    DT <- dcast(DT, trip_id ~ stop_sequence, value.var = 'dynust_format')
+    DT <- DT[order(`1`)][, trip_id := substr(as.character(trip_id), 4, 7)]
+    
+    return (DT)
+}
+
+split_trips_dir0 <- getDepTimes(select_stop_times_dir0) # LTC to CDS
+split_trips_dir1 <- getDepTimes(select_stop_times_dir1) # CDS to LTC
+
+# fwrite(split_trips_dir0, 'Valencia/output/2021_GTFS_trip_departure_LTC_CDS.csv')
+# fwrite(split_trips_dir1, 'Valencia/output/2021_GTFS_trip_departure_CDS_LTC.csv')
