@@ -147,15 +147,19 @@ stops_dir1 # Casino Del Sol to Laos Transit Center
 # saveWidget(stops_dir0, file = "Valencia/output/stops_LTC_CDS.html")
 # saveWidget(stops_dir1, file = "Valencia/output/stops_CDS_LTC.html")
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Transit Route Schedule -------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 # function to get departure times for each trip
 getDepTimes <- function(data) {
     DT <- copy(data)[, .(trip_id, stop_sequence, departure_time)]
-    DT[, departure_time := round(departure_time, 'minutes')]
-    DT[, dynust_format := as.numeric(paste0(hour(departure_time), '.', minute(departure_time)))]
+    DT[, dynust_format := paste0(hour(departure_time), '.', sprintf('%02d', minute(departure_time)))]
     DT$departure_time <- NULL
     
     DT <- dcast(DT, trip_id ~ stop_sequence, value.var = 'dynust_format')
-    DT <- DT[order(`1`)][, trip_id := substr(as.character(trip_id), 4, 7)]
+    DT <- DT[order(as.numeric(`1`))][, trip_id := substr(as.character(trip_id), 4, 7)]
     
     return (DT)
 }
@@ -163,5 +167,5 @@ getDepTimes <- function(data) {
 split_trips_dir0 <- getDepTimes(select_stop_times_dir0) # LTC to CDS
 split_trips_dir1 <- getDepTimes(select_stop_times_dir1) # CDS to LTC
 
-# fwrite(split_trips_dir0, 'Valencia/output/2021_GTFS_trip_departure_LTC_CDS.csv')
-# fwrite(split_trips_dir1, 'Valencia/output/2021_GTFS_trip_departure_CDS_LTC.csv')
+# fwrite(split_trips_dir0, 'Valencia/output/2021_GTFS_trip_departure_LTC_CDS.txt', sep = '\t')
+# fwrite(split_trips_dir1, 'Valencia/output/2021_GTFS_trip_departure_CDS_LTC.txt', sep = '\t')
