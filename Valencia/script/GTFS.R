@@ -52,7 +52,7 @@ calendar_dates <- fread("Valencia/data/GTFS_SunTran/calendar_dates.txt")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Transit in Study Area --------------------------------------------------------
+# Transit in Study Area: Data Processing -------------------------------------
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # select service id from calendar
@@ -152,7 +152,8 @@ stops_dir1 # Casino Del Sol to Laos Transit Center
 # Transit Route Schedule -------------------------------------------------------
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# function to get departure times for each trip
+# A: get departure times for each trip
+
 getDepTimes <- function(data) {
     DT <- copy(data)[, .(trip_id, stop_sequence, departure_time)]
     DT[, dynust_format := paste0(hour(departure_time), '.', sprintf('%02d', minute(departure_time)))]
@@ -169,3 +170,27 @@ split_trips_dir1 <- getDepTimes(select_stop_times_dir1) # CDS to LTC
 
 # fwrite(split_trips_dir0, 'Valencia/output/2021_GTFS_trip_departure_LTC_CDS.txt', sep = '\t')
 # fwrite(split_trips_dir1, 'Valencia/output/2021_GTFS_trip_departure_CDS_LTC.txt', sep = '\t')
+
+# B: distance along bus stops in each route
+
+ex_trip_id_dir0 <- select_stop_times_dir0$trip_id[1]
+ex_trip_id_dir1 <- select_stop_times_dir1$trip_id[1]
+
+getStopDist <- function(x, ex_trip_id) {
+    y <- copy(x)[trip_id == ex_trip_id, .(stop_sequence, shape_dist_traveled)]
+    y[, dist_feet := shape_dist_traveled * 3280.84]
+    
+    y$dist_feet[1] <- 0
+    y[, dist_feet := round(shift(dist_feet, type = 'lead') - dist_feet, 0L)]
+}
+
+stop_dist_dir0 <- getStopDist(select_stop_times_dir0, ex_trip_id_dir0)
+stop_dist_dir1 <- getStopDist(select_stop_times_dir1, ex_trip_id_dir1)
+
+stop_dist <- data.table(
+    stop_seq = seq(1, nrow(stop_dist_dir0), 1),
+    CDS_LTC = stop_dist_dir1$dist_feet,
+    LTC_CDS = stop_dist_dir0$dist_feet
+) |> head(-1L)
+
+# fwrite(stop_dist, 'Valencia/output/2021_GTFS_stop_dist.csv')
