@@ -198,3 +198,49 @@ stop_dist <- data.table(
 ) |> head(-1L)
 
 # fwrite(stop_dist, 'Valencia/output/2021_GTFS_stop_dist.csv')
+
+# C: create route data in DynusT format
+
+dynust_bus_route <- fread("Valencia/data/DynusT_Valencia_BusStop_Distance.csv")
+
+aNode_CL <- dynust_bus_route$aNode1
+bNode_CL <- dynust_bus_route$bNode1
+
+aNode_LC <- dynust_bus_route$aNode2
+bNode_LC <- dynust_bus_route$bNode2
+
+dynust_stop_dist_CL <- dynust_bus_route$`CDS-LTC`
+dynust_stop_dist_LC <- dynust_bus_route$`LTC-CDS`
+
+getDynustRoute <- function(aNode, bNode, stop_dist, stop_seq_start) {
+    
+    num_row <- length(aNode)
+    rep_neg1 <- rep(-1L, num_row)
+    rep_zero <- rep(0L, num_row)
+    
+    dt <- data.table(
+        aNode = aNode,
+        bNode = bNode,
+        num_stop = sprintf('%.1f', rep(1L, num_row)),
+        stop_seq = seq(stop_seq_start, stop_seq_start + num_row - 1L, 1L),
+        col1 = rep_neg1,
+        col2 = rep_neg1,
+        col3 = rep_neg1,
+        dist = stop_dist,
+        col4 = rep_neg1,
+        col5 = rep_neg1,
+        col6 = rep_neg1,
+        col7 = rep_zero,
+        col8 = rep_zero,
+        col9 = rep_zero,
+        col10 = rep_zero
+    )
+    
+    return(dt)
+}
+
+dynust_route_CL <- getDynustRoute(aNode_CL, bNode_CL, dynust_stop_dist_CL, 101L)
+dynust_route_LC <- getDynustRoute(aNode_LC, bNode_LC, dynust_stop_dist_LC, 201L)
+
+# fwrite(dynust_route_LC, 'Valencia/output/2021_GTFS_dynust_route_LTC_CDS.txt', sep = '\t')
+# fwrite(dynust_route_CL, 'Valencia/output/2021_GTFS_dynust_route_CDS_LTC.txt', sep = '\t')
