@@ -155,7 +155,11 @@ stops_dir1 # Casino Del Sol to Laos Transit Center
 # A: get departure times for each trip
 
 getDepTimes <- function(data) {
-    DT <- copy(data)[, .(trip_id, stop_sequence, departure_time)]
+    
+    # ignore departure time for last stop sequence
+    len_stop_seq <- max(data$stop_sequence)
+    
+    DT <- copy(data)[stop_sequence != len_stop_seq, .(trip_id, stop_sequence, departure_time)]
     DT[, dynust_format := paste0(hour(departure_time), '.', sprintf('%02d', minute(departure_time)))]
     DT$departure_time <- NULL
     
