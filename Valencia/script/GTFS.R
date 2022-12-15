@@ -244,3 +244,27 @@ dynust_route_LC <- getDynustRoute(aNode_LC, bNode_LC, dynust_stop_dist_LC, 201L)
 
 # fwrite(dynust_route_LC, 'Valencia/output/2021_GTFS_dynust_route_LTC_CDS.txt', sep = '\t')
 # fwrite(dynust_route_CL, 'Valencia/output/2021_GTFS_dynust_route_CDS_LTC.txt', sep = '\t')
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Transit Dwell Time -----------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+dwell_time <- 0.15
+
+getDwellTime <- function(trips_dep_df) {
+    
+    num_trips <- nrow(trips_dep_df)
+    num_stops <- length(trips_dep_df) - 1L
+    
+    dt <- cbind(as.data.table(trips_dep_df$trip_id),
+                as.data.table(matrix(dwell_time, num_trips, num_stops)))
+    
+    return(dt)
+}
+
+dwell_time_CL <- getDwellTime(split_trips_dir1)
+dwell_time_LC <- getDwellTime(split_trips_dir0)
+
+# fwrite(dwell_time_LC, 'Valencia/output/2021_GTFS_dwell_time_LTC_CDS.txt', sep = '\t')
+# fwrite(dwell_time_CL, 'Valencia/output/2021_GTFS_dwell_time_CDS_LTC.txt', sep = '\t')
