@@ -44,13 +44,7 @@ FROM [ADOT_INRIX].[dbo].[Inrix_RealTime]
 */
 
 -- speed and travel time data
-SELECT time_mst
-    , SegmentID
-    , Bearing
-    , Miles
-    , speed
-    , travelTimeMinutes
-    , score
+SELECT *
 FROM (
     SELECT t2.timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'US Mountain Standard Time' AS time_mst
         , t2.SegmentID
