@@ -11,7 +11,7 @@ OD <- data.table(
 )
 
 input_dir <- "Valencia/ignore/StreetLight/"
-input_file_vehicles <- "1202750_2021_ODD_Vehicles_od_all"
+input_file_vehicles <- "1378079_2021_ODD_Vehicles_v2_od_all"
 input_file_truck <- "1202751_2021_ODD_Truck_od_comm"
 
 
@@ -98,7 +98,7 @@ plot_truck
 
 output_dir <- "Valencia/output/"
 
-ggsave(paste0(output_dir, "2021_demand_dist_car.png"),
+ggsave(paste0(output_dir, "2021_demand_dist_car_v2.png"),
        plot = plot_car,
        units = "cm",
        width = 29.7,
