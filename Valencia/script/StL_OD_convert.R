@@ -10,7 +10,7 @@ OD <- data.table(
     Hour = rep.int(0:23, num_zone * num_zone) * 60
 )
 
-input_dir <- "Valencia/ignore/StreetLight/2021_ODD_v3/"
+input_dir <- "Valencia/ignore/StreetLight/2021_ODD_v2/"
 input_file_vehicles <- "vehicles"
 input_file_truck <- "trucks"
 
@@ -63,7 +63,7 @@ demand_truck <- getOD('truck', input_file_truck)
 dist_car <- copy(demand_car)[, .(Total_Volume = sum(Volume)), by = .(Hour)][, Hour := Hour / 60]
 dist_truck <- copy(demand_truck)[, .(Total_Volume = sum(Volume)), by = .(Hour)][, Hour := Hour / 60]
 
-total_car <- round(sum(dist_car$Total_Volume) / 10^6, 1)
+total_car <- round(sum(dist_car$Total_Volume) / 10^6, 2)
 total_truck <- round(sum(dist_truck$Total_Volume) / 10^3, 1)
 
 max(dist_car$Total_Volume)
@@ -76,8 +76,8 @@ plot_car <- dist_car |>
   scale_x_continuous(breaks = seq(0, 23, 3)) + 
   scale_y_continuous(breaks = seq(0, 200000, 25000)) + 
   annotate("text", x = 12, y = 12500, 
-           label = paste0("Total OD trips in 24 hours = ", total_car, " million"), size = 5) +
-  labs(x = "Hour", y = "Total OD Trips for Car") + 
+           label = paste0("Total OD traffic in 24 hours = ", total_car, " million"), size = 5) +
+  labs(x = "Hour", y = "Total OD Traffic for Car") + 
   theme(panel.grid.minor = element_blank(),
         axis.title = element_text(size = 13),
         axis.text = element_text(size = 13))
@@ -89,8 +89,8 @@ plot_truck <- dist_truck |>
   scale_x_continuous(breaks = seq(0, 23, 3)) + 
   scale_y_continuous(breaks = seq(0, 2000, 250)) + 
   annotate("text", x = 10, y = 150, 
-           label = paste0("Total OD trips in 24 hours = ", total_truck, " thousand"), size = 5) +
-  labs(x = "Hour", y = "Total OD Trips for Truck") + 
+           label = paste0("Total OD traffic in 24 hours = ", total_truck, " thousand"), size = 5) +
+  labs(x = "Hour", y = "Total OD Traffic for Truck") + 
   theme(panel.grid.minor = element_blank(),
         axis.title = element_text(size = 13),
         axis.text = element_text(size = 13))
@@ -100,7 +100,7 @@ plot_truck
 
 output_dir <- "Valencia/output/"
 
-ggsave(paste0(output_dir, "2021_demand_dist_car_v2.png"),
+ggsave(paste0(output_dir, "2021_demand_dist_car.png"),
        plot = plot_car,
        units = "cm",
        width = 29.7,
